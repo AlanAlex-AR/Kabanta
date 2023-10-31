@@ -87,7 +87,7 @@ class MainWindow(QtWidgets.QWidget):
         super().__init__(*args, **kwargs)
         self.ui = Ui_window()
         self.ui.setupUi(self)
-        self.graphlength = 2000
+        self.graphlength = 200
         
         #Session
         self.signalState = SignalState.Idle
@@ -107,6 +107,7 @@ class MainWindow(QtWidgets.QWidget):
         self.co2 = co2.CO2()
         self.bp =bp.BloodPressure()
         self.zeros = 0
+        self.deltax = 0
 
         self.dataChannel1 = 0
         self.dataChannel2 = 0
@@ -127,9 +128,12 @@ class MainWindow(QtWidgets.QWidget):
             # Timers 
         self.timer = QtCore.QTimer()
         self.timer2 = QtCore.QTimer()
-        self.time = QtCore.QTime()
-        self.elapsedTime = QtCore.QElapsedTimer()
-
+        self.timestamp = QtCore.QTime()
+        self.timestamp.start()
+        self.elapsedTime = 0
+        print('El valor de Elapsed Time es:')
+        print(self.timestamp.toString('hh:mm:ss'))
+        print(self.timestamp.currentTime())
 
         # Connections
         self.s = ""
@@ -186,7 +190,8 @@ class MainWindow(QtWidgets.QWidget):
     # Funtiones del Ploteo Grafica (PUI)
     def initSignalGrahps(self):
         #Eje en x 
-        self.x = deque(np.linspace(0,4,self.graphlength),maxlen=self.graphlength)
+        self.x = deque(np.linspace(-4,0,self.graphlength),maxlen=self.graphlength)
+        print('len for self.x = '+str(self.x[-1]))
         # Senales Derivaciones cardiacas
         self.channel1 = deque([130 for i in self.x],maxlen=self.graphlength)
         self.channel2 = deque([110 for i in self.x],maxlen= self.graphlength)
@@ -195,40 +200,45 @@ class MainWindow(QtWidgets.QWidget):
         self.channel5 = deque([50 for i in self.x], maxlen=self.graphlength)
         self.channel6 = deque([30 for i in self.x], maxlen=self.graphlength)
 
-        self.data_line_channel1 = self.ui.plt.plot(self.x,self.channel1, pen = (162,249,161))
-        self.data_line_channel2 = self.ui.plt.plot(self.x,self.channel2, pen = (134,234,233))
-        self.data_line_channel3 = self.ui.plt.plot(self.x,self.channel3, pen = (136,51,64))
-        self.data_line_channel4 = self.ui.plt.plot(self.x,self.channel4, pen = (255,222,89))
-        self.data_line_channel5 = self.ui.plt.plot(self.x,self.channel5, pen = (171,171,171), fillLevel = -0.3, brush=(171,171,171, 60))
-        self.data_line_channel6 = self.ui.plt.plot(self.x, self.channel6, pen = (162,249,161))
+        self.data_line_channel1 = self.ui.plt.plot(self.x,self.channel1, pen = (162,249,161), skipFiniteCheck = True)
+        self.data_line_channel2 = self.ui.plt.plot(self.x,self.channel2, pen = (134,234,233),skipFiniteCheck = True)
+        self.data_line_channel3 = self.ui.plt.plot(self.x,self.channel3, pen = (136,51,64),skipFiniteCheck = True)
+        self.data_line_channel4 = self.ui.plt.plot(self.x,self.channel4, pen = (255,222,89),skipFiniteCheck = True)
+        self.data_line_channel5 = self.ui.plt.plot(self.x,self.channel5, pen = (171,171,171),skipFiniteCheck = True)#, fillLevel = -0.3, brush=(171,171,171, 60))
+        self.data_line_channel6 = self.ui.plt.plot(self.x, self.channel6, pen = (162,249,161),skipFiniteCheck = True)
         self.ui.plt.removeItem(self.data_line_channel6)
-        
+
         # getting plot item
-        self.ui.plt.getPlotItem().hideAxis('left')
-        self.plot_size = self.ui.plt.getPlotItem().height()
-        self.plot_x = self.ui.plt.getPlotItem().viewGeometry()
+        # self.ui.plt.getPlotItem().hideAxis('left')
+        # self.plot_size = self.ui.plt.getPlotItem().height()
+        # self.plot_x = self.ui.plt.getPlotItem().viewGeometry()
 
         self.ui.plt.setYRange(40, 140)
 
-        self.channel1Text = pg.TextItem('II', color = (162,249,161))
-        self.channel1Text.setPos(-0.2, 130)
-        self.ui.plt.addItem(self.channel1Text)
-        self.channel2Text = pg.TextItem('Pleth', color = (134,234,233))
-        self.channel2Text.setPos(-0.3, 110)
-        self.ui.plt.addItem(self.channel2Text)
-        self.channel3Text = pg.TextItem('ABP', color= (136,51,64))
-        self.channel3Text.setPos(-0.3, 90)
-        self.ui.plt.addItem(self.channel3Text)
-        self.channel4Text = pg.TextItem('Resp', color = (255,222,89))
-        self.channel4Text.setPos(-0.3, 70)
-        self.ui.plt.addItem(self.channel4Text)
-        self.channel5Text = pg.TextItem('CO2', color = (171,171,171))
-        self.channel5Text.setPos(-0.3, 50)
-        self.ui.plt.addItem(self.channel5Text)
-        self.channel6Text = pg.TextItem('aFV', color = (162,249,161))
-        self.channel6Text.setPos(-0.2, 30)
-        self.ui.plt.addItem(self.channel6Text)
-        self.ui.plt.removeItem(self.channel6Text)
+        # self.channel1Text = pg.TextItem('II', color = (162,249,161))
+        # self.channel1Text.setPos(-0.2, 130)
+        # self.ui.plt.addItem(self.channel1Text)
+        # self.channel2Text = pg.TextItem('Pleth', color = (134,234,233))
+        # self.channel2Text.setPos(-0.3, 110)
+        # self.ui.plt.addItem(self.channel2Text)
+        # self.channel3Text = pg.TextItem('ABP', color= (136,51,64))
+        # self.channel3Text.setPos(-0.3, 90)
+        # self.ui.plt.addItem(self.channel3Text)
+        # self.channel4Text = pg.TextItem('Resp', color = (255,222,89))
+        # self.channel4Text.setPos(-0.3, 70)
+        # self.ui.plt.addItem(self.channel4Text)
+        # self.channel5Text = pg.TextItem('CO2', color = (171,171,171))
+        # self.channel5Text.setPos(-0.3, 50)
+        # self.ui.plt.addItem(self.channel5Text)
+        # self.channel6Text = pg.TextItem('aFV', color = (162,249,161))
+        # self.channel6Text.setPos(-0.2, 30)
+        # self.ui.plt.addItem(self.channel6Text)
+        # self.ui.plt.removeItem(self.channel6Text)
+        self.countOfPlotItems()
+        
+    def countOfPlotItems(self):
+        print("### The number of Items are the following ###")
+        print(len(self.ui.plt.listDataItems()))
             
     def signalScenarioData(self):
         if self.scenarioState == ScenarioState.Idle:
@@ -273,6 +283,7 @@ class MainWindow(QtWidgets.QWidget):
             
 
     def Update_Grahp(self):
+        #start = time()
         if  self.pageState != PageState.LEADPAGE1 and self.pageState != PageState.LEADPAGE2:
             self.signalScenarioData()
         else:
@@ -283,9 +294,8 @@ class MainWindow(QtWidgets.QWidget):
             self.dataChannel5 = (self.ecg12[self.leadConfig["text5"]]*10)
             self.dataChannel6 = (self.ecg12[self.leadConfig["text6"]]*10)
         # Manejo de indices de la senal
-        if self.adderChannel1>1999:
+        if self.adderChannel1>self.graphlength:
             self.adderFlag = 1
-
         if(self.adderChannel1 >= len(self.dataChannel1)-1):
             self.adderChannel1 = 0
             self.zeros = self.adderChannel1
@@ -306,8 +316,8 @@ class MainWindow(QtWidgets.QWidget):
         self.adderChannel4 = self.adderChannel4 + 1
         self.adderChannel5 = self.adderChannel5 + 1
         self.adderChannel6 = self.adderChannel6 + 1
-        self.x.append(self.x[-1] + 0.002)  # Add a new value 1 higher than the last.
-
+        self.x.append(self.timestamp.elapsed()/1000)
+        #self.x.append(self.x[-1] + 0.02)  # Add a new value 1 higher than the last.
         # Add new values to the channels
         self.channel1.append(self.dataChannel1[self.adderChannel1]+ 130)
         self.channel2.append((self.dataChannel2[self.adderChannel2])+ 110)   
@@ -317,12 +327,12 @@ class MainWindow(QtWidgets.QWidget):
         self.channel6.append(self.dataChannel6[self.adderChannel6] + 30)
         
         # Actualizacion posicion de labels
-        self.channel1Text.setPos(self.x[0]-0.2, 130)
-        self.channel2Text.setPos(self.x[0]-0.3, 110)
-        self.channel3Text.setPos(self.x[0]-0.3, 90)
-        self.channel4Text.setPos(self.x[0]-0.3, 70)
-        self.channel5Text.setPos(self.x[0]-0.3, 50)
-        self.channel6Text.setPos(self.x[0]-0.2, 30)
+        # self.channel1Text.setPos(self.x[0]-0.2, 130)
+        # self.channel2Text.setPos(self.x[0]-0.3, 110)
+        # self.channel3Text.setPos(self.x[0]-0.3, 90)
+        # self.channel4Text.setPos(self.x[0]-0.3, 70)
+        # self.channel5Text.setPos(self.x[0]-0.3, 50)
+        # self.channel6Text.setPos(self.x[0]-0.2, 30)
 
         # Actualizacion de los datos
         
@@ -332,6 +342,8 @@ class MainWindow(QtWidgets.QWidget):
         self.data_line_channel4.setData(self.x, self.channel4)
         self.data_line_channel5.setData(self.x, self.channel5)
         self.data_line_channel6.setData(self.x, self.channel6)
+        #app.processEvents()
+        #print('Plotting time:'+str(time() - start) + ' is the result of the operation of' + str(time()) +' - '+str(start))
 
     ##########################################################################################
     # Funciones Callbacks de botones
@@ -371,17 +383,20 @@ class MainWindow(QtWidgets.QWidget):
             self.pageState = PageState.DEFAULTPAGE
             self.ui.stackedWidget.setCurrentIndex(PageState.DEFAULTPAGE)
             self.enableDisableVitalSignalMenu(False)
+        self.countOfPlotItems()
     
     
     def onPlayButtonClicked(self):
+        print('El valor de Elapsed Time al momento de presionar Play Button es:')
+        print(self.timestamp.toString('hh:mm:ss'))
+        print('El Elapsed Time desde el comiendo del programa es: '+ str(self.timestamp.elapsed()/1000))
         if (self.pageState != PageState.OFFPAGE):
             if(self.signalState == SignalState.Idle):
                 self.setDefaultValues()
                 self.generateSig = obtainSignals()
                 self.ecg12 = self.generateSig.generateSignals(self.mi_diccionario[HEART_RATE])
                 self.rsp = list(self.generateSig.generate_rsp())
-        
-                self.time.__init__(0,0,0,0)
+            
             
             if(self.signalState != SignalState.Playing):
                 self.ui.heartRateValue_Label.setText(str(self.mi_diccionario[HEART_RATE]))
@@ -406,11 +421,15 @@ class MainWindow(QtWidgets.QWidget):
                     self.worker.sendMessage()
                 
                 # Manejo de timer y time
-                self.elapsedTime.start()
-                self.timer.setInterval(2)
-                self.timer.timeout.connect(self.Update_Grahp)
+                
+                self.timestamp.start()
+                print('El valor de Elapsed Time al momento de presionar Play Button despues del Start es:')
+                print(self.timestamp.toString('hh:mm:ss'))
+                self.timer.setInterval(20)
+                ## self.timer.timeout.connect(self.Update_Grahp)
                 self.timer.timeout.connect(self.Update_Time)
                 self.timer.start()
+        self.countOfPlotItems()
 
     def onPauseButtonClicked(self):
         if (self.pageState != PageState.OFFPAGE) and (self.signalState == SignalState.Playing) :
@@ -421,6 +440,7 @@ class MainWindow(QtWidgets.QWidget):
             if self.state != State.IdleDisconnected:
                 self.worker.encodeMesage(8,2)
                 self.worker.sendMessage()
+        self.countOfPlotItems()
         
     def onStopButtonClicked(self):
         if (self.pageState != PageState.OFFPAGE) and (self.signalState != SignalState.Idle):
@@ -440,6 +460,7 @@ class MainWindow(QtWidgets.QWidget):
             if self.state != State.IdleDisconnected:
                 self.worker.encodeMesage(8,3)
                 self.worker.sendMessage()
+        self.countOfPlotItems()
             
     def resetKabSim(self):
         self.enableDisableVitalSignalMenu(True)
@@ -467,6 +488,7 @@ class MainWindow(QtWidgets.QWidget):
         self.initSignalGrahps()
         self.signalState = SignalState.Idle
         self.workingState = WorkingState.Idle
+        self.countOfPlotItems()
     
     def resetDefib(self):
         self.ui.Shock_pushButton.setStyleSheet(Stylesheet)
@@ -490,6 +512,7 @@ class MainWindow(QtWidgets.QWidget):
             self.pageState = PageState.DEFAULTPAGE
             self.resetCPRPage()
             self.data_line_channel4 = self.ui.plt.plot(self.x,self.channel4, pen = (255,222,89))
+        self.countOfPlotItems()
     
     def onDEFIBButtonClicked(self):
         if (self.pageState != PageState.OFFPAGE) and (self.pageState != PageState.DEFIBPAGE) and (self.workingState != WorkingState.Busy):
@@ -511,6 +534,7 @@ class MainWindow(QtWidgets.QWidget):
             self.mi_pagevariables[DEFIB_CHARGE] = 0
             self.data_line_channel4 = self.ui.plt.plot(self.x,self.channel4, pen = (255,222,89))
             self.resetDefib()
+        self.countOfPlotItems()
     
     def onUpEnergySelectButtonClicked(self):
         if (self.pageState != PageState.OFFPAGE) and (self.pageState==PageState.DEFIBPAGE) and (self.defibState == DEFIBState.Select):
@@ -525,10 +549,11 @@ class MainWindow(QtWidgets.QWidget):
                 self.ui.Charge_pushButton.setStyleSheet(PressedStylesheet)
             else: 
                 self.ui.Charge_pushButton.setStyleSheet(Stylesheet)
+        self.countOfPlotItems()
 
 
     def onDownEnergySelectButtonClicked(self):
-       if (self.pageState != PageState.OFFPAGE) and (self.pageState==PageState.DEFIBPAGE) and (self.defibState == DEFIBState.Select):
+        if (self.pageState != PageState.OFFPAGE) and (self.pageState==PageState.DEFIBPAGE) and (self.defibState == DEFIBState.Select):
             if (self.mi_pagevariables[DEFIB_SELECT] < 30) and (self.mi_pagevariables[DEFIB_SELECT]-5 >= 0):
                 self.mi_pagevariables[DEFIB_SELECT] = self.mi_pagevariables[DEFIB_SELECT]-5
                 self.ui.defibLabel_pushButton.setText(f"DEFIB {self.mi_pagevariables[DEFIB_SELECT]} J SEL\nBIFASICO")
@@ -540,6 +565,7 @@ class MainWindow(QtWidgets.QWidget):
                 self.ui.Charge_pushButton.setStyleSheet(PressedStylesheet)
             else: 
                 self.ui.Charge_pushButton.setStyleSheet(Stylesheet)
+        self.countOfPlotItems()
 
     def onChargeButtonClicked(self):
         if (self.pageState != PageState.OFFPAGE) and (self.pageState==PageState.DEFIBPAGE) and (self.defibState == DEFIBState.Select) and (self.mi_pagevariables[DEFIB_SELECT] != 0):
@@ -553,6 +579,7 @@ class MainWindow(QtWidgets.QWidget):
             self.timer2.timeout.connect(self.defibCharging)
             self.timer2.start()
             print("charge button was clicked")
+        self.countOfPlotItems()
     
     def defibCharging(self):
         print("first timer is working")
@@ -587,6 +614,7 @@ class MainWindow(QtWidgets.QWidget):
             self.timer2.timeout.connect(self.defibDischarge)
             self.timer2.start()
             print("start of second timer ")
+        self.countOfPlotItems()
 
     def defibDischarge(self):
         print("second timer is working")
@@ -623,6 +651,7 @@ class MainWindow(QtWidgets.QWidget):
             self.timer2.setInterval(600)
             self.timer2.timeout.connect(self.defibShock)
             self.timer2.start()
+        self.countOfPlotItems()
             
     def defibShock(self):
         if (self.defibState == DEFIBState.Shock):
@@ -656,6 +685,7 @@ class MainWindow(QtWidgets.QWidget):
             # reset page variables
             self.resetPacerPage()
             self.data_line_channel4 = self.ui.plt.plot(self.x,self.channel4, pen = (255,222,89))
+        self.countOfPlotItems()
         
     
     def onPacerOutputUpButtonClicked(self):
@@ -753,19 +783,19 @@ class MainWindow(QtWidgets.QWidget):
                 self.channel5 = deque(startChannel5 + list(pd.DataFrame(list(self.co2.data))[0]+50)[:self.adderChannel5],maxlen = 2000)
                 self.channel6 = deque(startChannel6 + list((self.ecg12[self.leadConfig["text6"]]*10)+30)[:self.adderChannel6],maxlen = 2000)
                 
-            self.channel1Text.setText(self.leadConfig["text1"])
-            self.channel2Text.setText(self.leadConfig["text2"])
-            self.channel3Text.setText(self.leadConfig["text3"])
-            self.channel4Text.setText(self.leadConfig["text4"])
-            self.channel5Text.setText(self.leadConfig["text5"])
-            self.channel6Text.setText(self.leadConfig["text6"])
+            # self.channel1Text.setText(self.leadConfig["text1"])
+            # self.channel2Text.setText(self.leadConfig["text2"])
+            # self.channel3Text.setText(self.leadConfig["text3"])
+            # self.channel4Text.setText(self.leadConfig["text4"])
+            # self.channel5Text.setText(self.leadConfig["text5"])
+            # self.channel6Text.setText(self.leadConfig["text6"])
 
-            self.channel1Text.setColor(self.leadConfig["ch1"])
-            self.channel2Text.setColor(self.leadConfig["ch2"])
-            self.channel3Text.setColor(self.leadConfig["ch3"])
-            self.channel4Text.setColor(self.leadConfig["ch4"])
-            self.channel5Text.setColor(self.leadConfig["ch5"])
-            self.channel6Text.setColor(self.leadConfig["ch6"])
+            # self.channel1Text.setColor(self.leadConfig["ch1"])
+            # self.channel2Text.setColor(self.leadConfig["ch2"])
+            # self.channel3Text.setColor(self.leadConfig["ch3"])
+            # self.channel4Text.setColor(self.leadConfig["ch4"])
+            # self.channel5Text.setColor(self.leadConfig["ch5"])
+            # self.channel6Text.setColor(self.leadConfig["ch6"])
 
             self.data_line_channel1.setPen(self.leadConfig["ch1"])
             self.data_line_channel2.setPen(self.leadConfig["ch2"])
@@ -773,6 +803,7 @@ class MainWindow(QtWidgets.QWidget):
             self.data_line_channel4.setPen(self.leadConfig["ch4"])
             self.data_line_channel5.setPen(self.leadConfig["ch5"])
             self.data_line_channel6.setPen(self.leadConfig["ch6"])
+        self.countOfPlotItems()
 
     ##########################################################################################
     # Funciones Para el manejo del tiempo  
@@ -782,7 +813,9 @@ class MainWindow(QtWidgets.QWidget):
         self.ui.simulationTimeValue_pushButton.setText(str(self.elapsed_time))
     
     def updateElapsedTime(self):
-        self.elapsed_time = self.time.addMSecs(self.elapsedTime.elapsed()).toString("hh:mm:ss")
+        ## Separación para Eje X de la grafica
+        self.deltax = self.timestamp.elapsed()
+        self.elapsed_time = self.timestamp.addMSecs(self.deltax).toString("hh:mm:ss")
 
     def displayHello(self):
         print("hello")
